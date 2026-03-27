@@ -9,13 +9,14 @@ static constexpr const char* kVersion = "0.4.0";
 static constexpr const char* kDefaultSource = "test.ds";
 
 /// True if the last path segment already contains a dot (e.g. `foo.ds`, `a.b`).
+
 static bool basename_has_extension(const std::string& path) {
     size_t slash = path.find_last_of("/\\");
     std::string base = (slash == std::string::npos) ? path : path.substr(slash + 1);
     if (base.empty() || base == "." || base == "..") {
-        return true;
+        return false;
     }
-    return base.find('.') == std::string::npos;
+    return base.find('.') != std::string::npos;  
 }
 
 /// Opens Pico source: uses the path as given, or if that fails and the basename has no extension, tries `path + ".ds"`.
