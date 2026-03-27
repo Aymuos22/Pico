@@ -215,6 +215,33 @@ std::pair<Value, Error> Interpreter::visit_AssignNode(std::shared_ptr<AssignNode
     return { Value(), Error() };
 }
 
+std::pair<Value, Error> Interpreter::visit_RandNode(std::shared_ptr<RandNode> node, Context& context) {
+    auto hi_result = visit(node->hi_expr, context);
+    if (!hi_result.second.is_empty()) {
+        return hi_result;
+    }
+
+    if (!hi_result.first.is_number()) {
+        return { Value(), Error("rand requires a numeric upper bound", node->at.position) };
+    }
+
+    double n = hi_result.first.get_number();
+    if (std::floor(n) != n || n <= 0) {
+        return { Value(), Error("rand requires a positive integer upper bound", node->at.position) };
+    }
+
+    int max_value = static_cast<int>(n);
+    std::uniform_int_distribution<int> dist(1, max_value);
+    Value out(static_cast<double>(dist(rng())));
+
+    if (context.trace_stream) {
+        *context.trace_stream << trace_indent(context)
+                              << "rand " << max_value << " => " << out.to_string() << "\n";
+    }
+
+    return { out, Error() };
+}
+
 std::pair<Value, Error> Interpreter::visit_ProgramNode(std::shared_ptr<ProgramNode> node, Context& context) {
     Value last;
 
@@ -240,6 +267,7 @@ std::pair<Value, Error> Interpreter::visit(std::shared_ptr<Node> node, Context& 
     if (auto n = std::dynamic_pointer_cast<PrintNode>(node)) return visit_PrintNode(n, context);
     if (auto n = std::dynamic_pointer_cast<LetNode>(node)) return visit_LetNode(n, context);
     if (auto n = std::dynamic_pointer_cast<AssignNode>(node)) return visit_AssignNode(n, context);
+    if (auto n = std::dynamic_pointer_cast<RandNode>(node)) return visit_RandNode(n, context);
     if (auto n = std::dynamic_pointer_cast<ProgramNode>(node)) return visit_ProgramNode(n, context);
 
     return { Value(), Error("Internal error: unknown node type", 0) };
