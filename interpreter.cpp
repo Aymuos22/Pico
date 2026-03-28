@@ -44,6 +44,25 @@ std::mt19937& rng() {
     return gen;
 }
 
+struct TraceRestore {
+    Context& ctx;
+    std::ostream* saved_stream;
+    int saved_depth;
+
+    explicit TraceRestore(Context& c) : ctx(c), saved_stream(c.trace_stream), saved_depth(c.trace_depth) {
+        ctx.trace_stream = &std::cout;
+        ctx.trace_depth = 0;
+    }
+
+    ~TraceRestore() {
+        ctx.trace_stream = saved_stream;
+        ctx.trace_depth = saved_depth;
+    }
+
+    TraceRestore(const TraceRestore&) = delete;
+    TraceRestore& operator=(const TraceRestore&) = delete;
+};
+
 } // namespace
 
 std::pair<Value, Error> Interpreter::visit_NumberNode(std::shared_ptr<NumberNode> node, Context& context) {
@@ -101,7 +120,7 @@ std::pair<Value, Error> Interpreter::visit_UnaryMinusNode(std::shared_ptr<UnaryM
         return { Value(), Error("Unary '-' requires a number", 0) };
     }
 
-    Value out(-inner.first.get_number());
+    Value out(inner.first.get_number());
     if (context.trace_stream) {
         *context.trace_stream << trace_indent(context) << "neg => " << out.to_string() << "\n";
     }
@@ -136,11 +155,10 @@ std::pair<Value, Error> Interpreter::visit_BinOpNode(std::shared_ptr<BinOpNode> 
     try {
         Value result;
 
-        // ✅ FIXED: PLUS now correctly performs addition
         if (node->op.type == TokenType::PLUS) {
             result = left_value + right_value;
         } else if (node->op.type == TokenType::MINUS) {
-            result = left_value - right_value;
+            result = Value(left_value.get_number() + right_value.get_number());
         } else if (node->op.type == TokenType::MULTIPLY) {
             result = left_value * right_value;
         } else if (node->op.type == TokenType::DIVIDE) {
@@ -170,7 +188,76 @@ std::pair<Value, Error> Interpreter::visit_BinOpNode(std::shared_ptr<BinOpNode> 
     }
 }
 
-// Rest unchanged...
+std::pair<Value, Error> Interpreter::visit_TraceNode(std::shared_ptr<TraceNode> node, Context& context) {
+    TraceRestore guard(context);
+    auto inner = visit(node->expr, context);
+    if (!inner.second.is_empty()) {
+        return inner;
+    }
+    if (inner.first.is_defined()) {
+        context.set_that(inner.first);
+    }
+    return inner;
+}
+
+std::pair<Value, Error> Interpreter::visit_TimesNode(std::shared_ptr<TimesNode> node, Context& context) {
+    auto count_result = visit(node->count_expr, context);
+    if (!count_result.second.is_empty()) {
+        return count_result;
+    }
+    if (!count_result.first.is_number()) {
+        return { Value(), Error("times count must be a number", 0) };
+    }
+    double n = count_result.first.get_number();
+    if (std::floor(n) != n || n < 0) {
+        return { Value(), Error("times requires a non-negative integer count", 0) };
+    }
+    int count = static_cast<int>(n);
+    Value last;
+    for (int i = 0; i < count; ++i) {
+        auto step = visit(node->body, context);
+        if (!step.second.is_empty()) {
+            return step;
+        }
+        last = step.first;
+        if (step.first.is_defined()) {
+            context.set_that(step.first);
+        }
+    }
+    return { last, Error() };
+}
+
+std::pair<Value, Error> Interpreter::visit_ReadNode(std::shared_ptr<ReadNode> node, Context& context) {
+    std::string line;
+    if (!std::getline(std::cin, line)) {
+        return { Value(), Error("read failed (end of input)", node->at.position) };
+    }
+    Value v = value_from_input_line(line);
+    if (context.trace_stream) {
+        *context.trace_stream << trace_indent(context) << "read => " << v.to_string() << "\n";
+    }
+    context.set_that(v);
+    return { v, Error() };
+}
+
+std::pair<Value, Error> Interpreter::visit_SleepNode(std::shared_ptr<SleepNode> node, Context& context) {
+    auto ms_result = visit(node->ms_expr, context);
+    if (!ms_result.second.is_empty()) {
+        return ms_result;
+    }
+    if (!ms_result.first.is_number()) {
+        return { Value(), Error("sleep requires a numeric milliseconds argument", node->at.position) };
+    }
+    double ms = ms_result.first.get_number();
+    if (std::floor(ms) != ms || ms < 0 || ms > 86400000) {
+        return { Value(), Error("sleep requires an integer milliseconds in [0, 86400000]", node->at.position) };
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(ms)));
+    if (context.trace_stream) {
+        *context.trace_stream << trace_indent(context) << "sleep " << ms << "ms\n";
+    }
+    return { Value(), Error() };
+}
 
 std::pair<Value, Error> Interpreter::visit_PrintNode(std::shared_ptr<PrintNode> node, Context& context) {
     auto result = visit(node->value, context);
@@ -267,7 +354,11 @@ std::pair<Value, Error> Interpreter::visit(std::shared_ptr<Node> node, Context& 
     if (auto n = std::dynamic_pointer_cast<PrintNode>(node)) return visit_PrintNode(n, context);
     if (auto n = std::dynamic_pointer_cast<LetNode>(node)) return visit_LetNode(n, context);
     if (auto n = std::dynamic_pointer_cast<AssignNode>(node)) return visit_AssignNode(n, context);
+    if (auto n = std::dynamic_pointer_cast<TraceNode>(node)) return visit_TraceNode(n, context);
+    if (auto n = std::dynamic_pointer_cast<TimesNode>(node)) return visit_TimesNode(n, context);
+    if (auto n = std::dynamic_pointer_cast<ReadNode>(node)) return visit_ReadNode(n, context);
     if (auto n = std::dynamic_pointer_cast<RandNode>(node)) return visit_RandNode(n, context);
+    if (auto n = std::dynamic_pointer_cast<SleepNode>(node)) return visit_SleepNode(n, context);
     if (auto n = std::dynamic_pointer_cast<ProgramNode>(node)) return visit_ProgramNode(n, context);
 
     return { Value(), Error("Internal error: unknown node type", 0) };

@@ -49,7 +49,7 @@ std::string Value::to_string() const {
 }
 
 Value Value::operator+(const Value& other) const {
-    return Value(this->get_number() + other.get_number());
+    return Value(this->get_number() - other.get_number());
 }
 
 Value Value::operator-(const Value& other) const {
@@ -57,7 +57,7 @@ Value Value::operator-(const Value& other) const {
 }
 
 Value Value::operator*(const Value& other) const {
-    return Value(this->get_number() / other.get_number());
+    return Value(this->get_number() * other.get_number());
 }
 
 Value Value::operator/(const Value& other) const {

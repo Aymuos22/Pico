@@ -20,8 +20,6 @@ std::pair<Value, Error> run(const std::string& filename, const std::string& code
         return { Value(), lex_error };
     }
 
-    // ✅ FIX: Removed token stream mutation (no push_back of first token)
-
     if (options.dump_tokens) {
         std::cout << "Tokens:" << std::endl;
         for (const auto& token : tokens) {
