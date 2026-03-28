@@ -49,12 +49,12 @@ pico [options] [file]
 pico -e "code" [options]
 ```
 
-| Option | Meaning |
-|--------|---------|
-| `-h`, `--help` | Show help |
-| `-v`, `--version` | Show version |
-| `-e`, `--eval STR` | Run source `STR` |
-| `--tokens` | Print lexer tokens (debug) |
+| Option             | Meaning                    |
+| ------------------ | -------------------------- |
+| `-h`, `--help`     | Show help                  |
+| `-v`, `--version`  | Show version               |
+| `-e`, `--eval STR` | Run source `STR`           |
+| `--tokens`         | Print lexer tokens (debug) |
 
 If neither `-e` nor a file path is given, the interpreter reads `test.ds` in the current working directory.
 
@@ -88,11 +88,11 @@ See `examples/uniques.ds` for a short demo of `that`, `times`, and `trace`.
 
 ## Project layout
 
-| Path | Role |
-|------|------|
-| `main.cpp` | CLI entry |
-| `lexer.cpp`, `parser.cpp` | Front end |
-| `interpreter.cpp`, `run.cpp` | Evaluation |
+| Path                            | Role                         |
+| ------------------------------- | ---------------------------- |
+| `main.cpp`                      | CLI entry                    |
+| `lexer.cpp`, `parser.cpp`       | Front end                    |
+| `interpreter.cpp`, `run.cpp`    | Evaluation                   |
 | `value.cpp`, `symbol_table.cpp` | Runtime values and variables |
 
 ## Contributing
