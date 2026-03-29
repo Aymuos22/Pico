@@ -158,7 +158,7 @@ std::pair<Value, Error> Interpreter::visit_BinOpNode(std::shared_ptr<BinOpNode> 
         if (node->op.type == TokenType::PLUS) {
             result = left_value + right_value;
         } else if (node->op.type == TokenType::MINUS) {
-            result = Value(left_value.get_number() + right_value.get_number());
+            result = Value(left_value.get_number() - right_value.get_number());
         } else if (node->op.type == TokenType::MULTIPLY) {
             result = left_value * right_value;
         } else if (node->op.type == TokenType::DIVIDE) {
