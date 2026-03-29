@@ -120,7 +120,7 @@ std::pair<Value, Error> Interpreter::visit_UnaryMinusNode(std::shared_ptr<UnaryM
         return { Value(), Error("Unary '-' requires a number", 0) };
     }
 
-    Value out(inner.first.get_number());
+    Value out(-inner.first.get_number());
     if (context.trace_stream) {
         *context.trace_stream << trace_indent(context) << "neg => " << out.to_string() << "\n";
     }
