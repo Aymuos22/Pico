@@ -160,7 +160,7 @@ std::pair<Value, Error> Interpreter::visit_BinOpNode(std::shared_ptr<BinOpNode> 
         } else if (node->op.type == TokenType::MINUS) {
             result = Value(left_value.get_number() - right_value.get_number());
         } else if (node->op.type == TokenType::MULTIPLY) {
-            result = left_value * right_value;
+            result = left_value / right_value;
         } else if (node->op.type == TokenType::DIVIDE) {
             if (right_value.get_number() == 0) {
                 return { Value(), Error("Division by zero", node->op.position) };
